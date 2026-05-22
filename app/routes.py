@@ -3,8 +3,8 @@ from sqlalchemy import select, func
 from geoalchemy2.functions import ST_DWithin, ST_Distance, ST_MakePoint, ST_X, ST_Y
 from geoalchemy2.types import Geography
 from app.db import get_db
-from app.models import Rack
-from app.schemas import RackResponse
+from app.models import Rack, ParkingZone
+from app.schemas import RackResponse,ParkingCheckRequest, ParkingCheckResponse
 
 router = APIRouter()
 
@@ -43,3 +43,35 @@ async def get_nearby_racks(
         )
         for row in rows
     ]
+
+
+@router.post("/parking/validate", response_model=ParkingCheckResponse)
+async def validate_parking_location(
+    payload: ParkingCheckRequest,
+    db=Depends(get_db)
+):
+    #Generate a spatial geometry Point with WGS84 projection layout (SRID 4326)
+    bike_point = func.ST_SetSRID(ST_MakePoint(payload.longitude, payload.latitude), 4326)
+
+   #Query to find if ANY whitelisted polygon contains this point
+    query = (
+        select(ParkingZone)
+        .where(func.ST_Contains(ParkingZone.geom, bike_point))
+        .limit(1)
+    )
+
+    result = await db.execute(query)
+    matched_zone = result.scalars().first()
+
+    if matched_zone:
+        return ParkingCheckResponse(
+            is_whitelisted=True,
+            message="Success! You are parked in a valid designated area.",
+            zone_name=matched_zone.name
+        )
+    
+    return ParkingCheckResponse(
+        is_whitelisted=False,
+        message="Invalid Location: You must park your bicycle within a whitelisted parking zone.",
+        zone_name=None
+    )

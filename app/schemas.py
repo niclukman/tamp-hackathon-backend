@@ -9,4 +9,15 @@ class RackResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class ParkingCheckRequest(BaseModel):
+    latitude: float
+    longitude: float
+
+
+class ParkingCheckResponse(BaseModel):
+    is_whitelisted: bool
+    message: str
+    zone_name: str | None = None
     

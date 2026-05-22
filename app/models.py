@@ -15,3 +15,15 @@ class Rack(Base):
     count = Column(Integer)
     sheltered = Column(Boolean)
     geom = Column(Geometry(geometry_type="POINT", srid=4326))
+
+class ParkingZone(Base):
+    __tablename__ = "parking_zones"
+    
+    # ogr2ogr names the primary key 'ogc_fid' by default
+    id = Column("ogc_fid", Integer, primary_key=True)
+    
+    # This maps to whatever properties GeoJSON has (e.g., zone name or code)
+    name = Column("name", String, nullable=True) 
+    
+    #POLYGON geometry here
+    geom = Column(Geometry(geometry_type="POLYGON", srid=4326))
